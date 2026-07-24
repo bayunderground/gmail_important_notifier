@@ -1,0 +1,5 @@
+cron:
+  - description: "renew gmail watch + retry pending notifications"
+    url: /tasks/renew
+    schedule: every 24 hours
+    timezone: Europe/Moscow
