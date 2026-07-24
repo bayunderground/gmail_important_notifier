@@ -87,8 +87,13 @@ def gmail_push():
         abort(400, "No historyId in payload")
 
     from sync import process_history_since
+    from telegram_client import format_notification, send_message
 
-    count = process_history_since(service, history_id)
+    def _notify(message_id, sender, subject, date):
+        text = format_notification(sender, subject, date)
+        send_message(settings, text)
+
+    count = process_history_since(service, history_id, notify_fn=_notify, settings=settings)
     return {"status": "ok", "processed": count}
 
 
