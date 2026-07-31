@@ -34,7 +34,7 @@ def main() -> None:
         sys.exit(1)
 
     flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-    creds = flow.run_local_server(port=0)
+    creds = flow.run_local_server(port=8080)
 
     print("\n--- Refresh Token ---\n")
     print(f"GMAIL_OAUTH_REFRESH_TOKEN={creds.refresh_token}")

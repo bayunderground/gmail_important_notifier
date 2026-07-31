@@ -26,3 +26,5 @@ __pycache__/
 test.py
 get_refresh_token.py
 client_secret.json
+
+client_secret*

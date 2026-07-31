@@ -1,5 +1,6 @@
 .env
 venv
+.venv
 *.pyc
 db.sqlite3
 .idea
@@ -33,3 +34,6 @@ pep8.report
 __pycache__
 .pytest_cache
 
+app.yaml
+
+client_secret*
