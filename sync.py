@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
+from googleapiclient.errors import HttpError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -60,7 +61,37 @@ def process_history_since(
             session.commit()
             return 0
 
-        records = history_list(service, last_id)
+        try:
+            records = history_list(service, last_id)
+        except HttpError as exc:
+            if exc.resp.status == 400:
+                raise
+            if exc.resp.status == 404:
+                log.warning(
+                    "History list 404 (startHistoryId=%s stale); "
+                    "re-watching to reset baseline",
+                    last_id,
+                )
+                from gmail_client import watch as gmail_watch
+
+                try:
+                    resp = gmail_watch(service, settings)
+                except Exception:
+                    log.exception("Re-watch after 404 failed")
+                    return 0
+                expiration_ms = int(resp.get("expiration", 0))
+                sync_state.watch_expiration = datetime.fromtimestamp(
+                    expiration_ms / 1000, tz=timezone.utc
+                )
+                sync_state.last_history_id = str(resp.get("historyId", last_id))
+                sync_state.updated_at = datetime.now(timezone.utc)
+                session.commit()
+                log.info(
+                    "Re-baselined historyId to %s after stale cursor",
+                    sync_state.last_history_id,
+                )
+                return 0
+            raise
         processed = 0
         newest_history_id = int(history_id)
 

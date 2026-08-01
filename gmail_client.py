@@ -24,11 +24,13 @@ def _build_service(settings: Settings):
 
 def watch(service, settings: Settings) -> dict:
     """Call users.watch. Returns the API response (historyId, expiration)."""
-    topic_name = f"projects/{settings.pubsub_topic_name}"
+    topic_name = f"projects/{settings.pubsub_project_id}/topics/{settings.pubsub_topic_name}"
     resp = service.users().watch(
         userId="me",
-        topicName=topic_name,
-        labelIds=["IMPORTANT"],
+        body={
+            "topicName": topic_name,
+            "labelIds": ["IMPORTANT"],
+        },
     ).execute()
     log.info("users.watch response: historyId=%s, expiration=%s",
              resp.get("historyId"), resp.get("expiration"))

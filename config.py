@@ -21,6 +21,7 @@ class Settings:
     telegram_bot_token: str
     telegram_chat_id: str
 
+    pubsub_project_id: str
     pubsub_topic_name: str
     pubsub_push_audience: str
 
@@ -40,6 +41,7 @@ def load_settings() -> Settings:
         gmail_oauth_refresh_token=os.environ["GMAIL_OAUTH_REFRESH_TOKEN"],
         telegram_bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
         telegram_chat_id=os.environ["TELEGRAM_CHAT_ID"],
+        pubsub_project_id=os.environ["PUBSUB_PROJECT_ID"],
         pubsub_topic_name=os.environ["PUBSUB_TOPIC_NAME"],
         pubsub_push_audience=os.environ["PUBSUB_PUSH_AUDIENCE"],
         notification_retry_after_seconds=int(

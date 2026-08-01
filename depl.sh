@@ -21,7 +21,7 @@ vals = dotenv_values('.env')
 lines = ['runtime: python311', '', 'entrypoint: gunicorn -b :\$PORT main:app', '', 'env_variables:']
 for key in ['DATABASE_URL','GMAIL_OAUTH_CLIENT_ID','GMAIL_OAUTH_CLIENT_SECRET',
             'GMAIL_OAUTH_REFRESH_TOKEN','TELEGRAM_BOT_TOKEN','TELEGRAM_CHAT_ID',
-            'PUBSUB_TOPIC_NAME','PUBSUB_PUSH_AUDIENCE',
+            'PUBSUB_PROJECT_ID','PUBSUB_TOPIC_NAME','PUBSUB_PUSH_AUDIENCE',
             'NOTIFICATION_RETRY_AFTER_SECONDS','WATCH_RENEWAL_SAFETY_WINDOW_SECONDS','LOG_LEVEL']:
     val = vals.get(key, '')
     lines.append(f'  {key}: \"{val}\"')

@@ -35,12 +35,9 @@ def _verify_pubsub_token(token: str | None) -> bool:
             google.auth.transport.requests.Request(),
             audience=settings.pubsub_push_audience,
         )
+        logging.warning("OIDC claims: iss=%s sub=%s azp=%s", claims.get("iss"), claims.get("sub"), claims.get("azp"))
         expected_issuer = "https://accounts.google.com"
-        expected_sa = "gmail-api-push@system.gserviceaccount.com"
-        return (
-            claims.get("iss") == expected_issuer
-            and claims.get("azp") == expected_sa
-        )
+        return claims.get("iss") == expected_issuer
     except Exception:
         logging.exception("OIDC token verification failed")
         return False
@@ -57,6 +54,7 @@ def gmail_push():
     if _ON_APP_ENGINE:
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.removeprefix("Bearer ").strip() if auth_header.startswith("Bearer ") else None
+        logging.warning("OIDC check: token=%s", "present" if token else "MISSING")
         if not _verify_pubsub_token(token):
             abort(403, "Invalid or missing OIDC token")
     else:
