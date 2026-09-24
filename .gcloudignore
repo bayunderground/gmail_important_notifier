@@ -24,6 +24,7 @@ __pycache__/
 
 # Local-only scripts
 test.py
+list_important_unread.py
 get_refresh_token.py
 client_secret.json
 

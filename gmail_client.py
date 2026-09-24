@@ -74,3 +74,40 @@ def get_message(service, message_id: str) -> dict:
         format="metadata",
         metadataHeaders=["From", "Subject", "Date"],
     ).execute()
+
+
+def list_messages(
+    service, label_ids: list[str], *, max_results: int = 100
+) -> list[dict]:
+    """Page through users.messages.list, returning all message summaries.
+
+    Multiple label_ids are AND-ed by the API (equivalent to Gmail search
+    combining terms with spaces). The gmail.metadata scope rejects the
+    `q` parameter, so label filtering must use labelIds.
+    """
+    all_messages = []
+    page_token = None
+    while True:
+        kwargs = {
+            "userId": "me",
+            "labelIds": label_ids,
+            "maxResults": max_results,
+        }
+        if page_token:
+            kwargs["pageToken"] = page_token
+
+        resp = service.users().messages().list(**kwargs).execute()
+        all_messages.extend(resp.get("messages", []))
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+
+    return all_messages
+
+
+def extract_header(headers: list[dict], name: str) -> str:
+    """Return a header value by case-insensitive name, or empty string."""
+    for h in headers:
+        if h.get("name", "").lower() == name.lower():
+            return h.get("value", "")
+    return ""

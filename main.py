@@ -106,7 +106,7 @@ def renew():
     from renew import renew_watch_if_needed, retry_pending_notifications
 
     renew_watch_if_needed(service, settings)
-    retry_pending_notifications(service)
+    retry_pending_notifications(service, settings)
     return {"status": "ok"}
 
 

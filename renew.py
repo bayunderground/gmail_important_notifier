@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from config import Settings
 from db import SessionLocal
-from gmail_client import get_message, watch
+from gmail_client import extract_header, get_message, watch
 from models import NotifiedMessage, SyncState
 from telegram_client import format_notification, send_message
 
@@ -16,6 +16,15 @@ log = logging.getLogger(__name__)
 
 def _get_sync_state(session) -> SyncState | None:
     return session.execute(select(SyncState).limit(1)).scalar_one_or_none()
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    """Coerce a DB datetime to aware UTC (legacy rows may be naive)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def renew_watch_if_needed(service, settings: Settings) -> None:
@@ -28,11 +37,12 @@ def renew_watch_if_needed(service, settings: Settings) -> None:
 
         now = datetime.now(timezone.utc)
         safety_window = timedelta(seconds=settings.watch_renewal_safety_window_seconds)
+        expiration = _as_utc(sync_state.watch_expiration)
 
-        if sync_state.watch_expiration and sync_state.watch_expiration - now > safety_window:
+        if expiration and expiration - now > safety_window:
             log.info(
                 "Watch still valid until %s, skipping renewal",
-                sync_state.watch_expiration,
+                expiration,
             )
             return
 
@@ -54,7 +64,7 @@ def renew_watch_if_needed(service, settings: Settings) -> None:
         log.info("Watch renewed, expires %s", sync_state.watch_expiration)
 
 
-def retry_pending_notifications(service) -> None:
+def retry_pending_notifications(service, settings: Settings) -> None:
     """Sweep NotifiedMessage rows that haven't been sent yet."""
     with SessionLocal() as session:
         pending = session.execute(
@@ -74,15 +84,9 @@ def retry_pending_notifications(service) -> None:
                 msg_data = get_message(service, row.message_id)
                 headers = msg_data.get("payload", {}).get("headers", [])
 
-                def _extract(name: str) -> str:
-                    for h in headers:
-                        if h.get("name", "").lower() == name.lower():
-                            return h.get("value", "")
-                    return ""
-
-                sender = _extract("From")
-                subject = _extract("Subject")
-                date = _extract("Date")
+                sender = extract_header(headers, "From")
+                subject = extract_header(headers, "Subject")
+                date = extract_header(headers, "Date")
 
                 text = format_notification(sender, subject, date)
                 send_message(settings, text)

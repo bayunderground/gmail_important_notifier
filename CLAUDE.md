@@ -15,6 +15,7 @@ source .venv/bin/activate
 python main.py                    # starts Flask on :8080
 python get_refresh_token.py       # one-time OAuth consent flow — NOT deployed, run manually and once
 python test.py                    # smoke-tests Gmail API connectivity and a Telegram send
+python list_important_unread.py   # prints subjects of is:important is:unread — local-only utility
 ```
 
 Two HTTP-triggered paths, neither meant to be hit manually in normal operation:
@@ -29,9 +30,13 @@ One-time setup (not part of `depl.sh`, done once before the first deploy):
 
 Routine deploy:
 ```bash
-bash depl.sh
+bash depl.sh          # App Engine (gcloud)
+bash deploy_vps.sh    # VPS: venv + systemd service + 6h renew timer — run ON the VPS
+bash disable_gae.sh   # stop App Engine cron + all versions (after VPS cutover)
 ```
-Loads env vars from `.env`, generates `app.yaml` from `app.template.yaml`, then `gcloud app deploy app.yaml cron.yaml`. `cron.yaml` carries the `/tasks/renew` schedule (daily) — Google's own guidance is to renew the watch about that often even though the hard expiration is 7 days, so daily leaves comfortable margin.
+`depl.sh` loads env vars from `.env`, generates `app.yaml` from `app.template.yaml`, then `gcloud app deploy app.yaml cron.yaml`. `cron.yaml` carries the `/tasks/renew` schedule (daily) — Google's own guidance is to renew the watch about that often even though the hard expiration is 7 days, so daily leaves comfortable margin.
+
+`deploy_vps.sh` installs packages, creates `.venv`, writes `gmail-important-notifier.service` + `gmail-important-notifier-renew.timer` (curl `/tasks/renew` every 6h), enables both, health-checks `:8080`. After cutover, repoint the Pub/Sub push subscription at the VPS and run `disable_gae.sh`.
 
 ## Architecture
 
@@ -40,6 +45,7 @@ Loads env vars from `.env`, generates `app.yaml` from `app.template.yaml`, then 
 - `sync.py` — `process_history_since()`, the push-triggered history sync, called by `/tasks/gmail-push`
 - `renew.py` — `renew_watch_if_needed()` and `retry_pending_notifications()`, both called by `/tasks/renew`
 - `get_refresh_token.py` — one-time local OAuth script, excluded from deploy via `.gcloudignore`
+- `list_important_unread.py` — local-only utility that lists subjects of important+unread messages (`labelIds=["IMPORTANT","UNREAD"]`, equivalent to `is:important is:unread`), excluded from deploy via `.gcloudignore`
 
 **Data flow — new mail (push path):**
 1. Gmail mailbox changes → Pub/Sub delivers `{emailAddress, historyId}` to `POST /tasks/gmail-push`
@@ -69,7 +75,7 @@ Loads env vars from `.env`, generates `app.yaml` from `app.template.yaml`, then 
 - Neon PostgreSQL, same setup as the reference project
 - `db.py` — identical `pool_pre_ping=True` engine config, same reasoning (Neon drops idle connections)
 
-**Gmail API:** `gmail.metadata` OAuth scope — narrower than `gmail.readonly`, and it also makes the API itself reject `format=full`/`raw`, not just this codebase's conventions. Only `users.watch`, `users.history.list`, `users.messages.get` are called anywhere — no `.modify` endpoint appears in the codebase, including error paths.
+**Gmail API:** `gmail.metadata` OAuth scope — narrower than `gmail.readonly`, and it also makes the API itself reject `format=full`/`raw` and the `q` search parameter, not just this codebase's conventions. Search-equivalent filtering must use `labelIds` (multiple labels are AND-ed). Called endpoints: `users.watch`, `users.history.list`, `users.messages.get`, and `users.messages.list` (local utility only) — no `.modify` endpoint appears in the codebase, including error paths.
 
 **Telegram:** reuses PriceMonitorBot's bot, via its own `TELEGRAM_BOT_TOKEN` env var (not shared or synced with PriceMonitorBot's copy — two independently deployed codebases, two copies of the same token). Posts to the same `TELEGRAM_CHAT_ID` as PriceMonitorBot, `📧` prefix on every message.
 

@@ -13,9 +13,11 @@ class SyncState(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     last_history_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    watch_expiration: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    watch_expiration: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
 
@@ -24,5 +26,9 @@ class NotifiedMessage(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    attempted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    notified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    attempted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    notified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
