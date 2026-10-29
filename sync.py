@@ -23,13 +23,6 @@ def _get_or_create_sync_state(session) -> SyncState:
     return row
 
 
-def _extract_header(headers: list[dict], name: str) -> str:
-    for h in headers:
-        if h.get("name", "").lower() == name.lower():
-            return h.get("value", "")
-    return ""
-
-
 def process_history_since(
     service,
     history_id: str,
@@ -49,7 +42,7 @@ def process_history_since(
     Returns:
         Number of messages processed.
     """
-    from gmail_client import get_message, history_list
+    from gmail_client import extract_header, get_message, history_list
 
     with SessionLocal() as session:
         sync_state = _get_or_create_sync_state(session)
@@ -132,9 +125,9 @@ def process_history_since(
                     continue
 
                 headers = msg_data.get("payload", {}).get("headers", [])
-                sender = _extract_header(headers, "From")
-                subject = _extract_header(headers, "Subject")
-                date = _extract_header(headers, "Date")
+                sender = extract_header(headers, "From")
+                subject = extract_header(headers, "Subject")
+                date = extract_header(headers, "Date")
 
                 if notify_fn:
                     try:
