@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -28,16 +26,3 @@ SessionLocal = sessionmaker(
     autocommit=False,
     future=True,
 )
-
-
-@contextmanager
-def session_scope():
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()

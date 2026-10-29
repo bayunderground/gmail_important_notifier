@@ -6,7 +6,6 @@ import os
 from flask import Flask, abort, request
 
 from config import load_settings
-from db import SessionLocal
 from gmail_client import _build_service
 
 app = Flask(__name__)
