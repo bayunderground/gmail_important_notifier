@@ -71,6 +71,9 @@ def retry_pending_notifications(service, settings: Settings) -> None:
             select(NotifiedMessage).where(
                 NotifiedMessage.notified_at.is_(None),
                 NotifiedMessage.attempted_at.isnot(None),
+                NotifiedMessage.attempted_at
+                < datetime.now(timezone.utc)
+                - timedelta(seconds=settings.notification_retry_after_seconds),
             )
         ).scalars().all()
 
